@@ -23,11 +23,9 @@ val blue800 = Color(0xff0035c9)
 val blueDarkPrimary = Color(0xff1c1d24)
 
 val yellow200 = Color(0xffffeb46)
-val yellow400 = Color(0xffffc000)
 val yellow500 = Color(0xffffde03)
-val yellowDarkPrimary = Color(0xff242316)
 
 val buttonBgColor = Color(0xFFEDD9FB)
 val screenBgColorStart = Color(0xFFEDEEF6)
 val screenBgColorEnd = Color(0xFFC6CEF3)
-val progressBarColor = Color(0xFFF7C55A)
+val progressBarColor = Color(0xffffde03)

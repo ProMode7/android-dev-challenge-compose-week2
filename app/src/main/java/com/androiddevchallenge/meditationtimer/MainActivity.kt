@@ -18,6 +18,12 @@ package com.androiddevchallenge.meditationtimer
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.keyframes
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -26,6 +32,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -45,6 +52,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -60,6 +68,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import com.androiddevchallenge.meditationtimer.ui.theme.MyTheme
@@ -73,128 +82,164 @@ import kotlinx.coroutines.launch
 
 var showStart: MutableState<Boolean> = mutableStateOf(true)
 var isTimerRunning: MutableState<Boolean> = mutableStateOf(false)
-var isPause: MutableState<Boolean> = mutableStateOf(true)
+var isPaused: MutableState<Boolean> = mutableStateOf(true)
 var progress: MutableState<Float> = mutableStateOf(362f)
 private const val DividerLengthInDegrees = 1.8f
 
 class MainActivity : AppCompatActivity() {
+    @ExperimentalAnimationApi
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             MyTheme {
-                CountDownTimerApp()
+                MeditationTimerApp()
             }
         }
     }
 }
 
+@ExperimentalAnimationApi
 @Preview("Light Theme", widthDp = 360, heightDp = 640)
 @Composable
 fun LightPreview() {
     MyTheme {
-        CountDownTimerApp()
+        MeditationTimerApp()
     }
 }
 
+@ExperimentalAnimationApi
 @Preview("Dark Theme", widthDp = 360, heightDp = 640)
 @Composable
 fun DarkPreview() {
     MyTheme(darkTheme = true) {
-        CountDownTimerApp()
+        MeditationTimerApp()
     }
 }
 
+@ExperimentalAnimationApi
 @Composable
-fun CountDownTimerApp() {
+fun MeditationTimerApp() {
     Surface(color = MaterialTheme.colors.background) {
         val coroutineScope = rememberCoroutineScope()
         Scaffold(
             content = {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
+                ConstraintLayout(
+                    Modifier
                         .fillMaxWidth()
                         .fillMaxHeight()
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(
-                                    MaterialTheme.colors.onPrimary,
-                                    screenBgColorStart,
-                                    screenBgColorEnd
+                ) {
+                    val (contentCol, cloudsCol) = createRefs()
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight()
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(
+                                        MaterialTheme.colors.onPrimary,
+                                        screenBgColorStart,
+                                        screenBgColorEnd
+                                    )
                                 )
                             )
-                        )
-                ) {
-                    Text(
-                        text = "3 Minute Meditation",
-                        style = MaterialTheme.typography.h4,
-                        modifier = Modifier
-                            .padding(20.dp)
-                    )
-                    ConstraintLayout(
-                        Modifier
-                            .fillMaxWidth()
-                            .height(320.dp)
-                            .padding(top = 20.dp)
+                            .constrainAs(contentCol) {
+                                top.linkTo(parent.top)
+                                start.linkTo(parent.start)
+                                end.linkTo(parent.end)
+                                bottom.linkTo(parent.bottom)
+                            }
                     ) {
-                        val (box, circle, innerBox, progressText) = createRefs()
-                        Box(
-                            modifier = Modifier
-                                .size(300.dp)
-                                .clip(CircleShape)
-                                .constrainAs(box) {
-                                    top.linkTo(parent.top)
-                                    start.linkTo(parent.start)
-                                    end.linkTo(parent.end)
-                                }
-                        )
-                        CircularProgressBar(
-                            Modifier
-                                .height(300.dp)
-                                .fillMaxWidth()
-                                .constrainAs(circle) {
-                                    top.linkTo(box.top, margin = 5.dp)
-                                    start.linkTo(box.start)
-                                    end.linkTo(box.end)
-                                    bottom.linkTo(box.bottom)
-                                },
-                            progress.value
-                        )
-                        Box(
-                            modifier = Modifier
-                                .size(240.dp)
-                                .clip(CircleShape)
-                                .constrainAs(innerBox) {
-                                    top.linkTo(circle.top, margin = 4.dp)
-                                    start.linkTo(circle.start, margin = 4.dp)
-                                    end.linkTo(circle.end, margin = 4.dp)
-                                    bottom.linkTo(circle.bottom, margin = 4.dp)
-                                }
-                                .background(color = buttonBgColor)
-                        )
-                        var seconds = (((progress.value - 2) % 120) / 2).toInt()
                         Text(
-                            text = "0${((progress.value - 2) / 120).toInt()}:${if (seconds < 10) "0$seconds" else seconds}",
-                            style = MaterialTheme.typography.h2.copy(Color.Black)
-                                .copy(fontWeight = FontWeight.Medium),
+                            text = "3 Minute Meditation",
+                            style = MaterialTheme.typography.h4,
                             modifier = Modifier
-                                .constrainAs(progressText) {
-                                    top.linkTo(circle.top, margin = 4.dp)
-                                    start.linkTo(circle.start, margin = 4.dp)
-                                    end.linkTo(circle.end, margin = 4.dp)
-                                    bottom.linkTo(circle.bottom, margin = 4.dp)
-                                }
+                                .padding(20.dp)
+                        )
+                        ConstraintLayout(
+                            Modifier
+                                .fillMaxWidth()
+                                .height(320.dp)
+                                .padding(top = 20.dp)
+                        ) {
+                            val (box, circle, innerBox, progressText) = createRefs()
+                            Box(
+                                modifier = Modifier
+                                    .size(300.dp)
+                                    .clip(CircleShape)
+                                    .constrainAs(box) {
+                                        top.linkTo(parent.top)
+                                        start.linkTo(parent.start)
+                                        end.linkTo(parent.end)
+                                    }
+                            )
+
+                            CircularProgressBar(
+                                Modifier
+                                    .height(300.dp)
+                                    .fillMaxWidth()
+                                    .constrainAs(circle) {
+                                        top.linkTo(box.top, margin = 5.dp)
+                                        start.linkTo(box.start)
+                                        end.linkTo(box.end)
+                                        bottom.linkTo(box.bottom)
+                                    },
+                                progress.value
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(240.dp)
+                                    .clip(CircleShape)
+                                    .constrainAs(innerBox) {
+                                        top.linkTo(circle.top, margin = 4.dp)
+                                        start.linkTo(circle.start, margin = 4.dp)
+                                        end.linkTo(circle.end, margin = 4.dp)
+                                        bottom.linkTo(circle.bottom, margin = 4.dp)
+                                    }
+                                    .background(color = buttonBgColor)
+                            )
+                            val seconds = (((progress.value - 2) % 120) / 2).toInt()
+                            Text(
+                                text = "0${((progress.value - 2) / 120).toInt()}:${if (seconds < 10) "0$seconds" else seconds}",
+                                style = MaterialTheme.typography.h2.copy(Color.Black)
+                                    .copy(fontWeight = FontWeight.Medium),
+                                modifier = Modifier
+                                    .constrainAs(progressText) {
+                                        top.linkTo(circle.top, margin = 4.dp)
+                                        start.linkTo(circle.start, margin = 4.dp)
+                                        end.linkTo(circle.end, margin = 4.dp)
+                                        bottom.linkTo(circle.bottom, margin = 4.dp)
+                                    }
+                            )
+                        }
+                        if (showStart.value) {
+                            SetTimerStartButton(coroutineScope)
+                        } else {
+                            SetTimerPauseStopButtons(coroutineScope)
+                        }
+                        val image: Painter = painterResource(id = R.drawable.med_bottom)
+                        Image(
+                            painter = image, contentDescription = ""
                         )
                     }
-                    if (showStart.value) {
-                        ShowStartButton(coroutineScope)
-                    } else {
-                        ShowBottomButtons(coroutineScope)
+                    Column(
+                        verticalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight()
+                            .padding(top = 150.dp)
+                            .constrainAs(cloudsCol) {
+                                top.linkTo(parent.top)
+                                start.linkTo(parent.start)
+                                end.linkTo(parent.end)
+                                bottom.linkTo(parent.bottom)
+                            }
+                    ) {
+                        val image: Painter = painterResource(id = R.drawable.ic_clouds)
+                        AddClouds(image, 50.dp, 0.dp)
+                        AddClouds(image, 50.dp, 100.dp)
+                        AddClouds(image, 50.dp, 200.dp)
                     }
-                    val image: Painter = painterResource(id = R.drawable.med_bottom)
-                    Image(
-                        painter = image, contentDescription = ""
-                    )
                 }
             }
         )
@@ -202,7 +247,31 @@ fun CountDownTimerApp() {
 }
 
 @Composable
-fun ShowStartButton(coroutineScope: CoroutineScope) {
+fun AddClouds(image: Painter, size: Dp, initialOffset: Dp) {
+    val infiniteOffsetTransition = rememberInfiniteTransition()
+    val defaultTarget = if (300f - initialOffset.value > 0) 300f - initialOffset.value else 350f
+    val offset by infiniteOffsetTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = defaultTarget,
+        animationSpec = infiniteRepeatable(
+            animation = keyframes {
+                durationMillis = 4250
+            },
+            repeatMode = RepeatMode.Reverse
+        )
+    )
+
+    Image(
+        painter = image,
+        contentDescription = "",
+        modifier = Modifier
+            .size(size)
+            .absoluteOffset(initialOffset + offset.dp, 0.dp)
+    )
+}
+
+@Composable
+fun SetTimerStartButton(coroutineScope: CoroutineScope) {
     Row(
         modifier = Modifier
             .padding(30.dp)
@@ -233,8 +302,9 @@ fun ShowStartButton(coroutineScope: CoroutineScope) {
     }
 }
 
+@ExperimentalAnimationApi
 @Composable
-fun ShowBottomButtons(coroutineScope: CoroutineScope) {
+fun SetTimerPauseStopButtons(coroutineScope: CoroutineScope) {
     Row(
         modifier = Modifier
             .padding(30.dp)
@@ -244,7 +314,7 @@ fun ShowBottomButtons(coroutineScope: CoroutineScope) {
             onClick = {
                 showStart.value = true
                 isTimerRunning.value = false
-                isPause.value = true
+                isPaused.value = true
                 progress.value = 362f
             },
             colors = ButtonDefaults.buttonColors(backgroundColor = buttonBgColor),
@@ -266,11 +336,11 @@ fun ShowBottomButtons(coroutineScope: CoroutineScope) {
         )
         Button(
             onClick = {
-                isTimerRunning.value = !isPause.value
+                isTimerRunning.value = !isPaused.value
                 coroutineScope.launch {
                     updateProgress()
                 }
-                isPause.value = !isPause.value
+                isPaused.value = !isPaused.value
             },
             colors = ButtonDefaults.buttonColors(backgroundColor = buttonBgColor),
             modifier = Modifier
@@ -278,8 +348,8 @@ fun ShowBottomButtons(coroutineScope: CoroutineScope) {
                 .size(70.dp)
         ) {
             Icon(
-                imageVector = if (isPause.value) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                contentDescription = if (isPause.value) "Pause" else "Resume",
+                imageVector = if (isPaused.value) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                contentDescription = if (isPaused.value) "Pause" else "Resume",
                 tint = Color.Black,
                 modifier = Modifier
                     .size(50.dp)
@@ -293,7 +363,7 @@ fun CircularProgressBar(
     modifier: Modifier = Modifier,
     sweep: Float
 ) {
-    val stroke = with(LocalDensity.current) { Stroke(8.dp.toPx()) }
+    val stroke = with(LocalDensity.current) { Stroke(12.dp.toPx()) }
     Canvas(modifier) {
         val innerRadius = (size.minDimension - stroke.width) / 2
         drawArc(
