@@ -1,4 +1,4 @@
-# Put title of your app here
+# Meditation Timer
 ![Workflow result](https://github.com/ProMode7/android-dev-challenge-compose-week2/workflows/Check/badge.svg)
 
 
@@ -17,7 +17,7 @@ https://dribbble.com/shots/12024270-Countdown-Timer-DailyUI014
 ### Dark Theme
 <img src="/results/screenshot_3.png" width="35%">&emsp;<img src="/results/screenshot_4.png" width="35%">
 
-<img src="/results/gif_1.gif" width="35%">&emsp;<img src="/results/gif_2.gif" width="35%">
+<img src="/results/gif_1.gif" width="35%">
 
 ## License
 ```
